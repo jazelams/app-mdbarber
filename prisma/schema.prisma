@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Barbero {
+  id            String        @id @default(uuid())
+  email         String        @unique
+  passwordHash  String
+  nombre        String
+  horarios      Horario[]
+  bloqueos      Bloqueo[]
+  citas         Cita[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("barbero")
+}
+
+model Servicio {
+  id           String        @id @default(uuid())
+  nombre       String
+  precio       Decimal
+  duracion     Int           // Duración en minutos
+  imagenUrl    String?       // URL de la imagen del servicio
+  citas        Cita[]
+  createdAt    DateTime      @default(now())
+
+  @@map("servicio")
+}
+
+model Cita {
+  id              String   @id @default(uuid())
+  nombreCliente   String
+  telefonoCliente String
+  servicioId      String
+  servicio        Servicio  @relation(fields: [servicioId], references: [id])
+  barberoId       String?
+  barbero         Barbero?  @relation(fields: [barberoId], references: [id])
+  fechaInicio     DateTime
+  fechaFin        DateTime
+  precio          Decimal
+  estado          EstadoCita @default(PENDIENTE)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([fechaInicio, fechaFin])
+  @@map("cita")
+}
+
+model Horario {
+  id          String   @id @default(uuid())
+  barberoId   String
+  barbero     Barbero   @relation(fields: [barberoId], references: [id])
+  diaSemana   Int      // 0=Domingo, 1=Lunes, ...
+  horaInicio  String   // Formato "HH:mm"
+  horaFin     String   // Formato "HH:mm"
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([barberoId, diaSemana])
+  @@map("horario")
+}
+
+model Bloqueo {
+  id          String   @id @default(uuid())
+  barberoId   String
+  barbero     Barbero   @relation(fields: [barberoId], references: [id])
+  fechaInicio DateTime
+  fechaFin    DateTime
+  motivo      String?
+  createdAt   DateTime @default(now())
+
+  @@map("bloqueo")
+}
+
+enum EstadoCita {
+  PENDIENTE
+  CONFIRMADA
+  CANCELADA
+  COMPLETADA
+}
