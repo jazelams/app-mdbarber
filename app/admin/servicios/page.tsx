@@ -20,6 +20,7 @@ export default function ServicesPage() {
     // Form state
     const [formData, setFormData] = useState<Partial<Service>>({});
     const [isCreating, setIsCreating] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
         fetchServices();
@@ -82,13 +83,62 @@ export default function ServicesPage() {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('¿Eliminar este servicio?')) return;
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validar tamaño (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('La imagen no debe superar 5MB');
+            return;
+        }
+
+        // Validar tipo
+        if (!file.type.startsWith('image/')) {
+            alert('Solo se permiten imágenes');
+            return;
+        }
+
+        setUploading(true);
         try {
-            await fetch(`/api/admin/services/${id}`, { method: 'DELETE' });
-            fetchServices();
+            const formDataUpload = new FormData();
+            formDataUpload.append('file', file);
+
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: formDataUpload,
+            });
+
+            if (res.ok) {
+                const { url } = await res.json();
+                setFormData({ ...formData, imagenUrl: url });
+            } else {
+                alert('Error al subir imagen');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error al subir imagen');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleDelete = async (id: string, nombre: string) => {
+        if (!confirm(`¿Estás seguro que deseas eliminar el servicio "${nombre}"?`)) return;
+
+        try {
+            const res = await fetch(`/api/admin/services/${id}`, { method: 'DELETE' });
+
+            if (res.ok) {
+                fetchServices();
+                if (editingId === id) handleCancel(); // Close modal if open
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Error al eliminar el servicio');
+            }
         } catch (e) {
-            alert('Error al eliminar');
+            console.error(e);
+            alert('Error al conectar con el servidor');
         }
     };
 
@@ -142,20 +192,73 @@ export default function ServicesPage() {
                                     onChange={e => setFormData({ ...formData, duracion: parseInt(e.target.value) })}
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm text-zinc-400 mb-1">URL Imagen (Opcional)</label>
-                                <input
-                                    type="text"
-                                    placeholder="https://..."
-                                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-[#D4AF37] outline-none"
-                                    value={formData.imagenUrl || ''}
-                                    onChange={e => setFormData({ ...formData, imagenUrl: e.target.value })}
-                                />
+                            <div className="md:col-span-2">
+                                <label className="block text-sm text-zinc-400 mb-2">Imagen del Servicio</label>
+                                <div className="flex gap-4 items-start">
+                                    {formData.imagenUrl && (
+                                        <div className="relative">
+                                            <img
+                                                src={formData.imagenUrl}
+                                                alt="Preview"
+                                                className="w-32 h-32 rounded-lg object-cover border border-zinc-800"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, imagenUrl: '' })}
+                                                className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full text-white hover:bg-red-600"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    )}
+                                    <div className="flex-1">
+                                        <label className="block w-full cursor-pointer">
+                                            <div className="border-2 border-dashed border-zinc-800 rounded-lg p-6 text-center hover:border-[#D4AF37] transition-colors">
+                                                {uploading ? (
+                                                    <div className="text-zinc-400">
+                                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D4AF37] mx-auto mb-2"></div>
+                                                        Subiendo...
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <ImageIcon className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+                                                        <p className="text-sm text-zinc-400">
+                                                            Haz clic para subir imagen
+                                                        </p>
+                                                        <p className="text-xs text-zinc-600 mt-1">
+                                                            PNG, JPG hasta 5MB
+                                                        </p>
+                                                    </>
+                                                )}
+                                            </div>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleImageUpload}
+                                                disabled={uploading}
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div className="flex justify-end gap-2">
-                            <button onClick={handleCancel} className="px-4 py-2 text-zinc-400 hover:text-white transition-colors">Cancelar</button>
-                            <button onClick={handleSave} className="px-6 py-2 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-colors">Guardar</button>
+                        <div className="flex justify-between items-center mt-6">
+                            <div>
+                                {!isCreating && editingId && (
+                                    <button
+                                        onClick={() => handleDelete(editingId, formData.nombre || '')}
+                                        className="px-4 py-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors flex items-center gap-2"
+                                    >
+                                        <Trash className="w-4 h-4" />
+                                        Eliminar
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={handleCancel} className="px-4 py-2 text-zinc-400 hover:text-white transition-colors">Cancelar</button>
+                                <button onClick={handleSave} className="px-6 py-2 bg-[#D4AF37] text-black font-bold rounded-lg hover:bg-[#B8860B] transition-colors">Guardar</button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -180,11 +283,11 @@ export default function ServicesPage() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-2">
                                 <button onClick={() => handleEdit(service)} className="p-2 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-lg transition-colors">
                                     <Edit className="w-5 h-5" />
                                 </button>
-                                <button onClick={() => handleDelete(service.id)} className="p-2 hover:bg-red-500/20 text-zinc-400 hover:text-red-500 rounded-lg transition-colors">
+                                <button onClick={() => handleDelete(service.id, service.nombre)} className="p-2 hover:bg-red-500/20 text-red-500 hover:text-red-400 rounded-lg transition-colors">
                                     <Trash className="w-5 h-5" />
                                 </button>
                             </div>

@@ -41,7 +41,14 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         });
 
         return NextResponse.json({ success: true });
-    } catch (error) {
-        return NextResponse.json({ error: 'Error deleting service' }, { status: 500 });
+    } catch (error: any) {
+        if (error.code === 'P2003') {
+            return NextResponse.json(
+                { error: 'No se puede eliminar el servicio porque tiene citas asociadas. Primero elimina las citas o archiva el servicio.' },
+                { status: 400 }
+            );
+        }
+        console.error('Error deleting service:', error);
+        return NextResponse.json({ error: 'Error al eliminar el servicio' }, { status: 500 });
     }
 }
