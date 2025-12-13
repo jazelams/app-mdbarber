@@ -8,60 +8,60 @@ datasource db {
 }
 
 model Barbero {
-  id            String        @id @default(uuid())
-  email         String        @unique
-  passwordHash  String
-  nombre        String
-  horarios      Horario[]
-  bloqueos      Bloqueo[]
-  citas         Cita[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  nombre       String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  bloqueos     Bloqueo[]
+  citas        Cita[]
+  horarios     Horario[]
 
   @@map("barbero")
 }
 
 model Servicio {
-  id           String        @id @default(uuid())
-  nombre       String
-  precio       Decimal
-  duracion     Int           // Duración en minutos
-  imagenUrl    String?       // URL de la imagen del servicio
-  citas        Cita[]
-  createdAt    DateTime      @default(now())
+  id        String   @id @default(uuid())
+  nombre    String
+  precio    Decimal
+  duracion  Int
+  imagenUrl String?
+  createdAt DateTime @default(now())
+  citas     Cita[]
 
   @@map("servicio")
 }
 
 model Cita {
-  id              String   @id @default(uuid())
+  id              String     @id @default(uuid())
   nombreCliente   String
   telefonoCliente String
   servicioId      String
-  servicio        Servicio  @relation(fields: [servicioId], references: [id])
   barberoId       String?
-  barbero         Barbero?  @relation(fields: [barberoId], references: [id])
   fechaInicio     DateTime
   fechaFin        DateTime
   precio          Decimal
   estado          EstadoCita @default(PENDIENTE)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  barbero         Barbero?   @relation(fields: [barberoId], references: [id])
+  servicio        Servicio   @relation(fields: [servicioId], references: [id])
 
   @@index([fechaInicio, fechaFin])
   @@map("cita")
 }
 
 model Horario {
-  id          String   @id @default(uuid())
-  barberoId   String
-  barbero     Barbero   @relation(fields: [barberoId], references: [id])
-  diaSemana   Int      // 0=Domingo, 1=Lunes, ...
-  horaInicio  String   // Formato "HH:mm"
-  horaFin     String   // Formato "HH:mm"
-  activo      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(uuid())
+  barberoId  String
+  diaSemana  Int
+  horaInicio String
+  horaFin    String
+  activo     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  barbero    Barbero  @relation(fields: [barberoId], references: [id])
 
   @@unique([barberoId, diaSemana])
   @@map("horario")
@@ -70,11 +70,11 @@ model Horario {
 model Bloqueo {
   id          String   @id @default(uuid())
   barberoId   String
-  barbero     Barbero   @relation(fields: [barberoId], references: [id])
   fechaInicio DateTime
   fechaFin    DateTime
   motivo      String?
   createdAt   DateTime @default(now())
+  barbero     Barbero  @relation(fields: [barberoId], references: [id])
 
   @@map("bloqueo")
 }
