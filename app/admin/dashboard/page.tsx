@@ -30,6 +30,7 @@ export default function DashboardPage() {
 
     // Filter State
     const [period, setPeriod] = useReactState<'overview' | 'custom'>('overview');
+    const [selectedPreset, setSelectedPreset] = useReactState<'7d' | '30d' | null>(null);
     const [customRange, setCustomRange] = useReactState({
         start: new Date().toISOString().split('T')[0],
         end: new Date().toISOString().split('T')[0]
@@ -89,7 +90,7 @@ export default function DashboardPage() {
     }, [period, customRange]); // Re-fetch when period or range changes
 
     // Helper to set preset ranges
-    const applyPreset = (days: number) => {
+    const applyPreset = (days: number, type: '7d' | '30d') => {
         const end = new Date();
         const start = new Date();
         start.setDate(end.getDate() - days);
@@ -98,6 +99,7 @@ export default function DashboardPage() {
             end: end.toISOString().split('T')[0]
         });
         setPeriod('custom');
+        setSelectedPreset(type);
     };
 
     const formatDate = (dateString: string) => {
@@ -168,21 +170,21 @@ export default function DashboardPage() {
                 {/* Filters */}
                 <div className="flex flex-wrap items-center gap-4 mb-8 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
                     <button
-                        onClick={() => setPeriod('overview')}
+                        onClick={() => { setPeriod('overview'); setSelectedPreset(null); }}
                         className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${period === 'overview' ? 'bg-white text-black' : 'text-zinc-400 hover:bg-zinc-800'}`}
                     >
                         Vision General
                     </button>
                     <div className="h-6 w-px bg-zinc-800 mx-2"></div>
                     <button
-                        onClick={() => applyPreset(7)}
-                        className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${period === 'custom' && customRange.start ? 'bg-[#D4AF37]/10 text-[#D4AF37]' : 'text-zinc-400 hover:bg-zinc-800'}`}
+                        onClick={() => applyPreset(7, '7d')}
+                        className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${selectedPreset === '7d' ? 'bg-[#D4AF37]/10 text-[#D4AF37]' : 'text-zinc-400 hover:bg-zinc-800'}`}
                     >
                         Últimos 7 días
                     </button>
                     <button
-                        onClick={() => applyPreset(30)}
-                        className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${period === 'custom' ? 'text-zinc-300 hover:bg-zinc-800' : 'text-zinc-400 hover:bg-zinc-800'}`}
+                        onClick={() => applyPreset(30, '30d')}
+                        className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${selectedPreset === '30d' ? 'bg-[#D4AF37]/10 text-[#D4AF37]' : 'text-zinc-400 hover:bg-zinc-800'}`}
                     >
                         Último Mes
                     </button>
@@ -192,7 +194,7 @@ export default function DashboardPage() {
                         <input
                             type="date"
                             value={customRange.start}
-                            onChange={(e) => { setCustomRange({ ...customRange, start: e.target.value }); setPeriod('custom'); }}
+                            onChange={(e) => { setCustomRange({ ...customRange, start: e.target.value }); setPeriod('custom'); setSelectedPreset(null); }}
                             className="bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-1.5 text-white text-sm focus:border-[#D4AF37] outline-none"
                             style={{ colorScheme: 'dark' }}
                         />
@@ -200,7 +202,7 @@ export default function DashboardPage() {
                         <input
                             type="date"
                             value={customRange.end}
-                            onChange={(e) => { setCustomRange({ ...customRange, end: e.target.value }); setPeriod('custom'); }}
+                            onChange={(e) => { setCustomRange({ ...customRange, end: e.target.value }); setPeriod('custom'); setSelectedPreset(null); }}
                             className="bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-1.5 text-white text-sm focus:border-[#D4AF37] outline-none"
                             style={{ colorScheme: 'dark' }}
                         />
