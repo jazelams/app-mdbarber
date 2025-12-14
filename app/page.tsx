@@ -9,8 +9,8 @@ export default function Home() {
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Logo Real */}
-            <div className="w-16 h-16 rounded-full flex items-center justify-center overflow-hidden border border-[#D4AF37] bg-black shadow-[0_0_10px_rgba(212,175,55,0.3)]">
-              <img src="/logo-final.png" alt="Logo La Mano de Dios" className="w-full h-full object-cover" />
+            <div className="w-20 h-20 flex items-center justify-center">
+              <img src="/logo-final.png" alt="Logo La Mano de Dios" className="w-full h-full object-contain" />
             </div>
             <span className="text-xl md:text-2xl font-black tracking-tighter uppercase italic">
               La Mano de <span className="text-[#D4AF37]">Dios</span>
@@ -20,16 +20,10 @@ export default function Home() {
           <div className="flex items-center gap-4">
             <Link
               href="/admin/login"
-              className="text-sm font-medium text-zinc-400 hover:text-[#D4AF37] flex items-center gap-2 transition-colors"
+              className="px-6 py-2.5 bg-[#D4AF37] text-black font-bold rounded-full hover:bg-[#B8860B] transition-all shadow-[0_0_15px_rgba(212,175,55,0.4)] flex items-center gap-2 text-sm uppercase tracking-wide"
             >
               <User className="w-4 h-4" />
               <span className="hidden sm:inline">Soy Barbero</span>
-            </Link>
-            <Link
-              href="/reservas"
-              className="bg-[#D4AF37] text-black px-6 py-2.5 rounded-full text-sm font-bold hover:bg-[#FCC200] transition-all shadow-[0_0_15px_rgba(212,175,55,0.4)]"
-            >
-              Reservar Cita
             </Link>
           </div>
         </div>
@@ -38,8 +32,8 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative flex-1 flex flex-col items-center justify-center py-8 overflow-hidden min-h-[calc(100vh-80px)]">
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/90 to-[#D4AF37]/10 z-10" />
-          <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1503951914875-452162b7f30a?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-30grayscale" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10" />
+          <div className="w-full h-full bg-[url('/fondo-barberia-texture.png')] bg-cover bg-center opacity-40" />
         </div>
 
         <div className="container mx-auto px-4 relative z-20 text-center">
