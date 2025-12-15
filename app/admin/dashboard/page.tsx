@@ -13,6 +13,7 @@ interface Appointment {
     precio: string;
     servicio: {
         nombre: string;
+        id: string;
     };
 }
 
@@ -36,6 +37,14 @@ export default function DashboardPage() {
         end: new Date().toISOString().split('T')[0]
     });
     const [filteredStats, setFilteredStats] = useReactState<{ income: number, total: number, completed: number, cancelled: number } | null>(null);
+
+    const [rescheduleModal, setRescheduleModal] = useReactState<{
+        isOpen: boolean;
+        appointment: Appointment | null;
+        date: string;
+        slots: string[];
+        loading: boolean;
+    }>({ isOpen: false, appointment: null, date: '', slots: [], loading: false });
 
     // Fetch Overview Data
     const fetchOverview = async () => {
@@ -142,6 +151,70 @@ export default function DashboardPage() {
             }
         } catch (error) {
             console.error('Failed to delete appointment', error);
+        }
+    };
+
+    const openReschedule = (apt: Appointment) => {
+        const today = new Date().toISOString().split('T')[0];
+        setRescheduleModal({
+            isOpen: true,
+            appointment: apt,
+            date: today,
+            slots: [],
+            loading: false
+        });
+        // Fetch slots for today immediately
+        fetchSlots(today, apt.servicio.id);
+    };
+
+    const fetchSlots = async (date: string, serviceId: string) => {
+        setRescheduleModal(prev => ({ ...prev, loading: true, date }));
+        try {
+            const res = await fetch(`/api/availability?date=${date}&serviceId=${serviceId}`);
+            if (res.ok) {
+                const slots = await res.json();
+                setRescheduleModal(prev => ({ ...prev, slots, loading: false }));
+            }
+        } catch (error) {
+            console.error(error);
+            setRescheduleModal(prev => ({ ...prev, loading: false }));
+        }
+    };
+
+    const confirmReschedule = async (timeSlot: string) => {
+        if (!rescheduleModal.appointment) return;
+
+        const [time, period] = timeSlot.split(' ');
+        let [hours, minutes] = time.split(':').map(Number);
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+
+        // FIX: Parse date parts manually to construct LOCAL time, avoiding UTC shift issues
+        // "2024-12-15" split -> [2024, 12, 15]
+        const [year, month, day] = rescheduleModal.date.split('-').map(Number);
+
+        // new Date(year, monthIndex, day, hours, minutes) creates a Local Time object
+        const newDateObj = new Date(year, month - 1, day, hours, minutes);
+
+        if (!confirm(`¿Re-agendar cita para el ${rescheduleModal.date} a las ${timeSlot}?`)) return;
+
+        try {
+            const res = await fetch(`/api/admin/appointments/${rescheduleModal.appointment.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ newDate: newDateObj.toISOString() })
+            });
+
+            if (res.ok) {
+                alert('Cita re-agendada con éxito');
+                setRescheduleModal({ ...rescheduleModal, isOpen: false });
+                if (period === 'overview') fetchOverview();
+                else fetchFiltered();
+            } else {
+                alert('Error al re-agendar');
+            }
+        } catch (error) {
+            alert('Error de conexión');
         }
     };
 
@@ -347,6 +420,13 @@ export default function DashboardPage() {
                                                 {apt.estado !== 'CANCELADA' && apt.estado !== 'COMPLETADA' && (
                                                     <>
                                                         <button
+                                                            onClick={() => openReschedule(apt)}
+                                                            className="p-2 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors"
+                                                            title="Re-agendar"
+                                                        >
+                                                            <Calendar className="w-4 h-4" />
+                                                        </button>
+                                                        <button
                                                             onClick={() => handleStatusChange(apt.id, 'COMPLETADA')}
                                                             className="p-2 hover:bg-green-500/20 text-green-500 rounded-lg transition-colors"
                                                             title="Marcar como Completada"
@@ -379,6 +459,51 @@ export default function DashboardPage() {
                 </div>
 
             </div >
-        </div >
+            {/* Reschedule Modal */}
+            {rescheduleModal.isOpen && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-white">Re-agendar Cita</h3>
+                            <button onClick={() => setRescheduleModal({ ...rescheduleModal, isOpen: false })} className="text-zinc-500 hover:text-white">
+                                <XCircle className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-zinc-400 mb-2">Selecciona nueva fecha:</label>
+                            <input
+                                type="date"
+                                value={rescheduleModal.date}
+                                onChange={(e) => fetchSlots(e.target.value, rescheduleModal.appointment!.servicio.id)}
+                                className="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-white outline-none focus:border-[#D4AF37]"
+                                style={{ colorScheme: 'dark' }}
+                            />
+                        </div>
+
+                        <div className="mb-4">
+                            <p className="text-sm font-medium text-zinc-400 mb-3">Horarios Disponibles:</p>
+                            {rescheduleModal.loading ? (
+                                <div className="text-center py-4 text-[#D4AF37]">Buscando huecos...</div>
+                            ) : rescheduleModal.slots.length > 0 ? (
+                                <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+                                    {rescheduleModal.slots.map(slot => (
+                                        <button
+                                            key={slot}
+                                            onClick={() => confirmReschedule(slot)}
+                                            className="px-2 py-2 bg-zinc-800 hover:bg-[#D4AF37] hover:text-black text-white text-xs font-bold rounded-lg transition-colors"
+                                        >
+                                            {slot}
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-center py-4 text-zinc-500">No hay horarios disponibles para este día.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }
