@@ -58,7 +58,7 @@ export async function GET(request: Request) {
         });
 
         // 5. Filtrar slots que colisionen
-        const availableSlots = slots.filter(slotTime => {
+        let availableSlots = slots.filter(slotTime => {
             const slotStart = parse(slotTime, 'hh:mm a', queryDate);
             const slotEnd = addMinutes(slotStart, duration);
 
@@ -68,6 +68,26 @@ export async function GET(request: Request) {
                 return isBefore(slotStart, apt.fechaFin) && isAfter(slotEnd, apt.fechaInicio);
             });
         });
+
+        // 6. Validar que no sea fecha/hora pasada
+        const now = new Date();
+        const queryStartOfDay = startOfDay(queryDate);
+        const todayStartOfDay = startOfDay(now);
+
+        if (isBefore(queryStartOfDay, todayStartOfDay)) {
+            // Si la fecha solicitada es anterior a hoy, no hay disponibilidad (o devolver error)
+            return NextResponse.json([]);
+        }
+
+        // Si es hoy, filtrar slots que ya pasaron
+        if (queryStartOfDay.getTime() === todayStartOfDay.getTime()) {
+            availableSlots = availableSlots.filter(slotTime => {
+                const slotStart = parse(slotTime, 'hh:mm a', queryDate);
+                // Permitir reservar solo si faltan al menos X minutos? O solo si es futuro.
+                // Usemos simple: si slotStart > now
+                return isAfter(slotStart, now);
+            });
+        }
 
         return NextResponse.json(availableSlots);
 

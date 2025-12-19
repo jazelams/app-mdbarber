@@ -4,40 +4,44 @@ import { useState as useReactState, useEffect as useReactEffect } from "react";
 import Link from "next/link";
 import { Scissors, Calendar, DollarSign, Clock, CheckCircle, XCircle, Trash2 } from "lucide-react";
 
+// Definición de tipos para las Citas
 interface Appointment {
     id: string;
     nombreCliente: string;
     telefonoCliente: string;
-    fechaInicio: string;
-    estado: string;
-    precio: string;
+    fechaInicio: string;  // Fecha en formato ISO string
+    estado: string;       // PENDIENTE, CONFIRMADA, COMPLETADA, CANCELADA
+    precio: string;       // Precio como string (desde decimal)
     servicio: {
         nombre: string;
         id: string;
     };
 }
 
+// Estadísticas para los widgets superiores
 interface Stats {
-    weekIncome: number;
-    monthIncome: number;
-    dayIncome: number;
-    activeAppointments: number;
+    weekIncome: number;       // Ingresos de la semana
+    monthIncome: number;      // Ingresos del mes
+    dayIncome: number;        // Ingresos de hoy
+    activeAppointments: number; // Citas pendientes/confirmadas futuras
 }
 
 export default function DashboardPage() {
+    // Estado principal de citas y estadísticas
     const [appointments, setAppointments] = useReactState<Appointment[]>([]);
     const [stats, setStats] = useReactState<Stats>({ weekIncome: 0, monthIncome: 0, dayIncome: 0, activeAppointments: 0 });
     const [loading, setLoading] = useReactState(true);
 
-    // Filter State
-    const [period, setPeriod] = useReactState<'overview' | 'custom'>('overview');
-    const [selectedPreset, setSelectedPreset] = useReactState<'7d' | '30d' | null>(null);
+    // Estados para Filtras y Reportes
+    const [period, setPeriod] = useReactState<'overview' | 'custom'>('overview'); // Visión general vs Rango personalizado
+    const [selectedPreset, setSelectedPreset] = useReactState<'7d' | '30d' | null>(null); // Filtros rápidos
     const [customRange, setCustomRange] = useReactState({
-        start: new Date().toISOString().split('T')[0],
-        end: new Date().toISOString().split('T')[0]
+        start: new Date().toISOString().split('T')[0], // Inicio (hoy)
+        end: new Date().toISOString().split('T')[0]    // Fin (hoy)
     });
     const [filteredStats, setFilteredStats] = useReactState<{ income: number, total: number, completed: number, cancelled: number } | null>(null);
 
+    // Estado del Modal de Re-agendar
     const [rescheduleModal, setRescheduleModal] = useReactState<{
         isOpen: boolean;
         appointment: Appointment | null;
@@ -47,12 +51,14 @@ export default function DashboardPage() {
     }>({ isOpen: false, appointment: null, date: '', slots: [], loading: false });
 
     // Fetch Overview Data
+    // Función para obtener la Visión General (Overview)
+    // Carga las últimas citas y las estadísticas básicas
     const fetchOverview = async () => {
         setLoading(true);
         try {
             const [resAppt, resStats] = await Promise.all([
-                fetch('/api/admin/appointments'),
-                fetch('/api/admin/stats')
+                fetch('/api/admin/appointments'), // Últimas citas (límite default)
+                fetch('/api/admin/stats')         // Stats generales
             ]);
             if (resAppt.ok) setAppointments(await resAppt.json());
             if (resStats.ok) setStats(await resStats.json());
@@ -64,13 +70,14 @@ export default function DashboardPage() {
     };
 
     // Fetch Filtered Data
+    // Obtiene datos filtrados por rango de fecha
     const fetchFiltered = async () => {
         setLoading(true);
         try {
             const query = `?startDate=${customRange.start}&endDate=${customRange.end}`;
             const [resAppt, resStats] = await Promise.all([
-                fetch(`/api/admin/appointments${query}`),
-                fetch(`/api/admin/stats${query}`)
+                fetch(`/api/admin/appointments${query}`), // Citas en el rango
+                fetch(`/api/admin/stats${query}`)         // Stats calculados para el rango
             ]);
 
             if (resAppt.ok) setAppointments(await resAppt.json());
@@ -90,15 +97,16 @@ export default function DashboardPage() {
         }
     };
 
+    // Efecto para recargar datos cuando cambian los filtros
     useReactEffect(() => {
         if (period === 'overview') {
             fetchOverview();
         } else {
             fetchFiltered();
         }
-    }, [period, customRange]); // Re-fetch when period or range changes
+    }, [period, customRange]);
 
-    // Helper to set preset ranges
+    // Helper para aplicar rangos rápidos (7 días, 30 días)
     const applyPreset = (days: number, type: '7d' | '30d') => {
         const end = new Date();
         const start = new Date();

@@ -131,156 +131,119 @@ export default function SchedulePage() {
 
     return (
         <div className="min-h-screen bg-zinc-950 p-4 md:p-8">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-7xl mx-auto">
                 <header className="flex items-center gap-4 mb-8">
                     <Link href="/admin/dashboard" className="p-2 bg-zinc-900 rounded-full text-zinc-400 hover:text-white transition-colors">
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
-                    <h1 className="text-3xl font-bold text-white">Configurar Horarios</h1>
+                    <div>
+                        <h1 className="text-3xl font-bold text-white">Gestionar Horarios</h1>
+                        <p className="text-zinc-500 text-sm">Configura la disponibilidad para cada día de la semana de forma independiente.</p>
+                    </div>
                 </header>
 
-                {/* Quick Config Section */}
-                <div className="bg-zinc-900 border border-[#D4AF37]/30 rounded-2xl overflow-hidden mb-8 shadow-lg shadow-[#D4AF37]/5">
-                    <div className="p-4 border-b border-zinc-800 bg-zinc-950/30">
-                        <h2 className="text-xl font-bold text-[#D4AF37] flex items-center gap-2">
-                            <Clock className="w-5 h-5" />
-                            Configuración Rápida
-                        </h2>
-                        <p className="text-zinc-500 text-sm">Aplica el mismo horario a múltiples días rápidamente.</p>
-                    </div>
-
-                    <div className="p-6 space-y-6">
-                        {/* 1. Select Days */}
-                        <div>
-                            <label className="text-xs font-bold text-zinc-500 uppercase block mb-3">1. Selecciona los días</label>
-                            <div className="flex flex-wrap gap-2">
-                                {DAYS.map((day, index) => {
-                                    const isSelected = selectedDays.includes(index);
-                                    return (
-                                        <button
-                                            key={index}
-                                            onClick={() => toggleDaySelection(index)}
-                                            className={`
-                                                px-3 py-2 rounded-lg text-sm font-medium transition-all border
-                                                ${isSelected
-                                                    ? 'bg-[#D4AF37] text-black border-[#D4AF37]'
-                                                    : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:border-zinc-600'}
-                                            `}
-                                        >
-                                            {day}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* 2. Configure Time */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-                            <div>
-                                <label className="text-xs font-bold text-zinc-500 uppercase block mb-3">2. Define el horario</label>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="time"
-                                        value={quickConfig.startTime}
-                                        onChange={(e) => setQuickConfig({ ...quickConfig, startTime: e.target.value })}
-                                        className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg p-2 text-white outline-none focus:border-[#D4AF37]"
-                                    />
-                                    <span className="text-zinc-600">-</span>
-                                    <input
-                                        type="time"
-                                        value={quickConfig.endTime}
-                                        onChange={(e) => setQuickConfig({ ...quickConfig, endTime: e.target.value })}
-                                        className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg p-2 text-white outline-none focus:border-[#D4AF37]"
-                                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {schedules.map((day, index) => (
+                        <div
+                            key={index}
+                            className={`
+                                relative overflow-hidden rounded-3xl border transition-all duration-300
+                                ${day.activo
+                                    ? 'bg-zinc-900/80 border-[#D4AF37]/30 shadow-[0_0_20px_rgba(212,175,55,0.05)]'
+                                    : 'bg-black/50 border-zinc-900 opacity-80'}
+                            `}
+                        >
+                            {/* Header Card */}
+                            <div className={`
+                                p-4 border-b flex items-center justify-between
+                                ${day.activo ? 'border-[#D4AF37]/10 bg-[#D4AF37]/5' : 'border-zinc-800 bg-zinc-900'}
+                            `}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`
+                                        w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs
+                                        ${day.activo ? 'bg-[#D4AF37] text-black' : 'bg-zinc-800 text-zinc-500'}
+                                    `}>
+                                        {DAYS[day.diaSemana].substring(0, 3).toUpperCase()}
+                                    </div>
+                                    <span className={`font-bold ${day.activo ? 'text-white' : 'text-zinc-500'}`}>
+                                        {DAYS[day.diaSemana]}
+                                    </span>
+                                </div>
+                                <div className={`
+                                    px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider
+                                    ${day.activo ? 'bg-green-500/20 text-green-500' : 'bg-red-500/10 text-red-500'}
+                                `}>
+                                    {day.activo ? 'ABIERTO' : 'CERRADO'}
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer bg-zinc-950 border border-zinc-800 px-4 py-2 rounded-lg hover:border-[#D4AF37]/50 transition-colors" title="Habilitar/Deshabilitar">
-                                    <input
-                                        type="checkbox"
-                                        checked={quickConfig.active}
-                                        onChange={(e) => setQuickConfig({ ...quickConfig, active: e.target.checked })}
-                                        className="w-5 h-5 accent-[#D4AF37] rounded cursor-pointer"
-                                    />
-                                    <span className="text-sm font-medium text-white">Marcar como abierto</span>
-                                </label>
+                            {/* Body Card */}
+                            <div className="p-6">
+                                <div className="space-y-4">
+                                    {/* Toggle Switch styled as a big button */}
+                                    <button
+                                        onClick={() => updateState(index, 'activo', !day.activo)}
+                                        className={`
+                                            w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2
+                                            ${day.activo
+                                                ? 'bg-zinc-800 text-zinc-400 hover:bg-red-900/30 hover:text-red-400'
+                                                : 'bg-zinc-800 text-zinc-300 hover:bg-green-900/30 hover:text-green-400'}
+                                        `}
+                                    >
+                                        {day.activo ? 'Apagar Día' : 'Activar Día'}
+                                    </button>
 
+                                    {/* Time Inputs */}
+                                    <div className={`transition-opacity duration-300 ${!day.activo ? 'opacity-25 pointer-events-none filter blur-[1px]' : ''}`}>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Clock className="w-4 h-4 text-[#D4AF37]" />
+                                            <span className="text-xs font-bold text-zinc-500 uppercase">Horario de Atención</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="relative flex-1">
+                                                <input
+                                                    type="time"
+                                                    value={day.horaInicio}
+                                                    onChange={(e) => updateState(index, 'horaInicio', e.target.value)}
+                                                    className="w-full bg-black border border-zinc-700 rounded-xl px-3 py-3 text-white text-center font-mono focus:border-[#D4AF37] outline-none transition-colors"
+                                                />
+                                            </div>
+                                            <span className="text-zinc-600 font-bold">:</span>
+                                            <div className="relative flex-1">
+                                                <input
+                                                    type="time"
+                                                    value={day.horaFin}
+                                                    onChange={(e) => updateState(index, 'horaFin', e.target.value)}
+                                                    className="w-full bg-black border border-zinc-700 rounded-xl px-3 py-3 text-white text-center font-mono focus:border-[#D4AF37] outline-none transition-colors"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="p-4 border-t border-zinc-900 bg-zinc-950/50">
                                 <button
-                                    onClick={handleBulkApply}
-                                    disabled={applyingBulk}
-                                    className="flex-1 bg-[#D4AF37] text-black font-bold py-2 px-4 rounded-lg hover:bg-[#FCC200] transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
+                                    onClick={() => handleSave(day)}
+                                    disabled={saving}
+                                    className={`
+                                        w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2
+                                        ${day.activo
+                                            ? 'bg-[#D4AF37] text-black hover:bg-[#b08d55] shadow-[0_4px_15px_rgba(212,175,55,0.2)]'
+                                            : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700 hover:text-white'}
+                                    `}
                                 >
-                                    {applyingBulk ? 'Aplicando...' : (
+                                    {saving ? 'Guardando...' : (
                                         <>
-                                            <Check className="w-4 h-4" />
-                                            Aplicar a seleccionados
+                                            <Save className="w-4 h-4" />
+                                            {day.activo ? 'Guardar Cambios' : 'Guardar Estado'}
                                         </>
                                     )}
                                 </button>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                    <div className="p-4 border-b border-zinc-800 bg-zinc-950/30">
-                        <h3 className="text-lg font-bold text-white">Detalle por Día</h3>
-                    </div>
-                    <div className="divide-y divide-zinc-800">
-                        {schedules.map((day, index) => (
-                            <div key={index} className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 hover:bg-zinc-800/20 transition-colors">
-                                <div className="flex items-center gap-4 w-full md:w-1/3">
-                                    <div className={`
-                                        w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm
-                                        ${day.activo ? 'bg-[#D4AF37]/10 text-[#D4AF37]' : 'bg-zinc-800 text-zinc-500'}
-                                    `}>
-                                        {DAYS[day.diaSemana].substring(0, 3)}
-                                    </div>
-                                    <div>
-                                        <span className={`font-bold ${day.activo ? 'text-white' : 'text-zinc-500'}`}>{DAYS[day.diaSemana]}</span>
-                                        {!day.activo && <p className="text-xs text-red-500 font-medium">CERRADO</p>}
-                                    </div>
-                                </div>
-
-                                <div className={`flex items-center gap-2 w-full md:w-1/3 justify-center ${!day.activo ? 'opacity-30 pointer-events-none' : ''}`}>
-                                    <input
-                                        type="time"
-                                        value={day.horaInicio}
-                                        onChange={(e) => updateState(index, 'horaInicio', e.target.value)}
-                                        className="bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-white text-sm focus:border-[#D4AF37] outline-none"
-                                    />
-                                    <span className="text-zinc-500">-</span>
-                                    <input
-                                        type="time"
-                                        value={day.horaFin}
-                                        onChange={(e) => updateState(index, 'horaFin', e.target.value)}
-                                        className="bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-white text-sm focus:border-[#D4AF37] outline-none"
-                                    />
-                                </div>
-
-                                <div className="w-full md:w-auto flex justify-end gap-3">
-                                    <label className="flex items-center gap-2 cursor-pointer md:mr-4">
-                                        <span className="text-xs text-zinc-500 uppercase">Abierto</span>
-                                        <input
-                                            type="checkbox"
-                                            checked={day.activo}
-                                            onChange={(e) => updateState(index, 'activo', e.target.checked)}
-                                            className="w-4 h-4 accent-[#D4AF37]"
-                                        />
-                                    </label>
-                                    <button
-                                        onClick={() => handleSave(day)}
-                                        disabled={saving}
-                                        className="p-2 bg-zinc-800 hover:bg-white hover:text-black text-zinc-300 rounded-lg transition-colors"
-                                        title="Guardar cambios individuales"
-                                    >
-                                        <Save className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    ))}
                 </div>
             </div>
         </div>

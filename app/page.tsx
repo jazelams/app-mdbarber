@@ -4,7 +4,7 @@ import { Scissors, Calendar, User, Facebook, MessageCircle, MapPin, ExternalLink
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-black text-white">
-      {/* Header */}
+      {/* Encabezado (Header) con Logo y Botón de Login para Barberos */}
       <header className="border-b border-zinc-900 bg-black/90 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -29,14 +29,16 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Sección Hero (Principal) */}
       <section className="relative flex-1 flex flex-col items-center justify-center py-8 overflow-hidden min-h-[calc(100vh-80px)]">
+        {/* Fondo con textura e imagen superpuesta */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10" />
           <div className="w-full h-full bg-[url('/fondo-barberia-texture.png')] bg-cover bg-center opacity-40" />
         </div>
 
         <div className="container mx-auto px-4 relative z-20 text-center">
+          {/* Botón flotante de Google Maps */}
           <a
             href="https://www.google.com/maps/place/%F0%9F%92%88La+Mano+De+Dios+Barber%C3%ADa%F0%9F%92%88/@20.9659762,-89.5716248,17z/data=!3m1!4b1!4m6!3m5!1s0x8f56719b53cfb923:0x7fd2598bdb61f11a!8m2!3d20.9659762!4d-89.5690445!16s%2Fg%2F11mvb_4h59?entry=ttu&g_ep=EgoyMDI1MTIwOS4wIKXMDSoKLDEwMDc5MjA3MUgBUAM%3D"
             target="_blank"
@@ -47,6 +49,7 @@ export default function Home() {
             VER EN GOOGLE MAPS
             <ExternalLink className="w-3 h-3 ml-1" />
           </a>
+
           <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white mb-4 uppercase italic leading-tight">
             💈 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-[#F7E7CE]">La Mano De Dios Barbería</span> 💈
           </h1>

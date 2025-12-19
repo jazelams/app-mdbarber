@@ -2,76 +2,101 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, User, Clock, Scissors, CheckCircle, AlertCircle } from "lucide-react";
+import { Calendar as CalendarIcon, User, Clock, Scissors, CheckCircle, AlertCircle } from "lucide-react"; // Renamed Calendar to CalendarIcon to avoid conflict
+import ServiceCalendar from "./ServiceCalendar";
 
+// Definición de la interfaz Servicio
 interface Service {
-    id: string;
-    nombre: string;
-    precio: number;
-    duracion: number;
+    id: string;        // ID único del servicio
+    nombre: string;    // Nombre del servicio (ej: "Corte de Cabello")
+    precio: number;    // Precio en MXN
+    duracion: number;  // Duración en minutos
 }
 
+// Interfaz para las reglas de calendario (días cerrados y bloqueos)
+interface ScheduleRules {
+    closedDays: number[]; // Días de la semana cerrados (0-6)
+    bloqueos: { start: string; end: string; motivo?: string }[]; // Fechas bloqueadas
+}
 
 export default function BookingForm() {
-    const router = useRouter();
-    const [services, setServices] = useState<Service[]>([]);
+    const router = useRouter(); // Hook para navegación
+
+    // Estados principales
+    const [services, setServices] = useState<Service[]>([]); // Lista de servicios disponibles
+    const [scheduleRules, setScheduleRules] = useState<ScheduleRules>({ closedDays: [], bloqueos: [] }); // Reglas de horario
+
+    // Estado de control del flujo del formulario (Pasos 1, 2, 3)
     const [step, setStep] = useState(1);
+
+    // Estados de UI (Carga, Error, Éxito)
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
 
+    // Estado del formulario con todos los datos de la reserva
     const [formData, setFormData] = useState({
-        serviceId: "",
-        date: "",
-        time: "",
-        nombreCliente: "",
-        telefonoCliente: "",
+        serviceId: "",       // ID del servicio seleccionado
+        date: "",            // Fecha seleccionada (YYYY-MM-DD)
+        time: "",            // Hora seleccionada (HH:mm)
+        nombreCliente: "",   // Nombre del cliente
+        telefonoCliente: "", // Teléfono del cliente
     });
 
+    // Horarios disponibles para la fecha seleccionada
     const [availableSlots, setAvailableSlots] = useState<string[]>([]);
 
+    // Efecto secundario: Buscar horarios disponibles cuando cambian fecha o servicio
     useEffect(() => {
         if (formData.date && formData.serviceId) {
-            setAvailableSlots([]); // Reset hours when date changes
+            setAvailableSlots([]); // Limpiar horarios anteriores
+
+            // Llamada al API para obtener slots disponibles
             fetch(`/api/availability?date=${formData.date}&serviceId=${formData.serviceId}`)
                 .then(res => res.json())
                 .then(data => {
                     if (Array.isArray(data)) {
-                        setAvailableSlots(data);
+                        setAvailableSlots(data); // Guardar horarios si la respuesta es un array
+                    } else {
+                        setAvailableSlots([]); // Array vacío si hay error o no hay disponibilidad
                     }
                 })
                 .catch(err => console.error(err));
         }
     }, [formData.date, formData.serviceId]);
 
-    // Fetch services on mount (simulated for now if API not ready, but we have DB)
-    // We'll fetch from a server action or API. Let's use API for simplicity now.
+    // Efecto de carga inicial: Obtener servicios y reglas del negocio (días cerrados)
     useEffect(() => {
-        async function fetchServices() {
+        async function fetchData() {
             try {
-                const res = await fetch('/api/services');
-                if (res.ok) {
-                    const data = await res.json();
+                // 1. Obtener Servicios
+                const resServices = await fetch('/api/services');
+                if (resServices.ok) {
+                    const data = await resServices.json();
                     setServices(data);
                 }
+
+                // 2. Obtener Reglas de Horario (Días bloqueados en backend)
+                const resRules = await fetch('/api/settings/schedule-rules');
+                if (resRules.ok) {
+                    const data = await resRules.json();
+                    setScheduleRules(data);
+                }
             } catch (error) {
-                console.error('Failed to fetch services', error);
+                console.error('Error cargando datos iniciales', error);
             }
         }
-        fetchServices();
+        fetchData();
     }, []);
 
+    // Manejador del envío del formulario (Crear Cita)
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+        e.preventDefault(); // Prevenir recarga de página
         setLoading(true);
         setError("");
 
         try {
-            // Find the real ID from DB if we were fetching, but for now we need real IDs 
-            // if we want foreign key constraints to work.
-            // Since I haven't made the GET endpoint, submitting might fail on FK.
-            // I should update this to fetch real services first.
-
+            // Enviamos los datos al API para crear la cita
             const response = await fetch("/api/appointments", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -84,11 +109,12 @@ export default function BookingForm() {
                 throw new Error(data.error || "Error al reservar");
             }
 
+            // Si todo sale bien, marcamos como exitoso
             setSuccess(true);
         } catch (err: any) {
-            setError(err.message);
+            setError(err.message); // Mostrar error al usuario
         } finally {
-            setLoading(false);
+            setLoading(false); // Desactivar estado de carga
         }
     };
 
@@ -179,6 +205,9 @@ export default function BookingForm() {
                 <form onSubmit={handleSubmit}>
                     {step === 1 && (
                         <div className="grid gap-4">
+                            {services.length === 0 && (
+                                <p className="text-center text-zinc-500">Cargando servicios...</p>
+                            )}
                             {services.map((service) => (
                                 <div
                                     key={service.id}
@@ -213,50 +242,63 @@ export default function BookingForm() {
 
                     {step === 2 && (
                         <div className="space-y-8">
-                            <div>
-                                <label className="block text-sm font-bold text-[#D4AF37] mb-3 uppercase tracking-wide">Selecciona Fecha</label>
-                                <div className="relative group">
-                                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-white z-10 pointer-events-none" />
-                                    <input
-                                        type="date"
-                                        required
-                                        className="w-full bg-zinc-900 border-2 border-zinc-800 rounded-xl pl-12 p-5 text-white text-lg font-medium focus:outline-none focus:border-[#D4AF37] transition-colors cursor-pointer appearance-none" // appearance-none helps but custom arrow might be needed or standard is fine if contrasted
-                                        style={{ colorScheme: 'dark' }} // Forces dark calendar picker in supported browsers
-                                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                        value={formData.date}
+                            <div className="grid md:grid-cols-2 gap-8">
+                                {/* Calendar Column */}
+                                <div>
+                                    <label className="block text-sm font-bold text-[#D4AF37] mb-3 uppercase tracking-wide">Selecciona Fecha</label>
+                                    <ServiceCalendar
+                                        selectedDate={formData.date}
+                                        onDateSelect={(date) => {
+                                            setFormData({ ...formData, date, time: '' }); // Reset time when date changes
+                                        }}
+                                        closedDays={scheduleRules.closedDays}
+                                        bloqueos={scheduleRules.bloqueos}
                                     />
-                                    {/* Visual helper text if picker is subtle */}
-                                    <p className="text-xs text-zinc-500 mt-2">Haz clic para abrir el calendario</p>
+                                    {formData.date && (
+                                        <div className="mt-2 text-center">
+                                            <span className="text-zinc-400 text-sm">Fecha seleccionada: </span>
+                                            <span className="text-white font-bold">{formData.date}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Time Column */}
+                                <div>
+                                    <label className="block text-sm font-bold text-[#D4AF37] mb-3 uppercase tracking-wide">Selecciona Hora</label>
+
+                                    {!formData.date ? (
+                                        <div className="h-40 flex flex-col items-center justify-center bg-zinc-900/50 rounded-xl border-2 border-dashed border-zinc-800 text-zinc-600">
+                                            <CalendarIcon className="w-8 h-8 mb-2 opacity-50" />
+                                            <p className="text-sm">Primero elige una fecha</p>
+                                        </div>
+                                    ) : availableSlots.length > 0 ? (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                            {availableSlots.map(h => (
+                                                <button
+                                                    key={h}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, time: h })}
+                                                    className={`py-3 px-2 rounded-lg text-sm font-bold transition-all border-2
+                                                        ${formData.time === h
+                                                            ? 'bg-[#D4AF37] text-black border-[#D4AF37] scale-105 shadow-[0_0_10px_rgba(212,175,55,0.4)]'
+                                                            : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-[#D4AF37] hover:text-[#D4AF37]'
+                                                        }`}
+                                                >
+                                                    {h}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-red-400 text-sm p-4 bg-red-900/10 rounded-xl border border-red-900/20 text-center flex flex-col items-center gap-2">
+                                            <AlertCircle className="w-6 h-6" />
+                                            <p className="font-bold">Sin Disponibilidad</p>
+                                            <p className="text-xs opacity-70">No hay horarios disponibles para esta fecha. Intenta otro día.</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-[#D4AF37] mb-3 uppercase tracking-wide">Selecciona Hora</label>
-                                {availableSlots.length > 0 ? (
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                                        {availableSlots.map(h => (
-                                            <button
-                                                key={h}
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, time: h })}
-                                                className={`py-3 px-2 rounded-lg text-sm font-bold transition-all border-2
-                                                    ${formData.time === h
-                                                        ? 'bg-[#D4AF37] text-black border-[#D4AF37] scale-105 shadow-[0_0_10px_rgba(212,175,55,0.4)]'
-                                                        : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-[#D4AF37] hover:text-[#D4AF37]'
-                                                    }`}
-                                            >
-                                                {h}
-                                            </button>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-red-400 text-sm p-4 bg-red-900/10 rounded-xl border border-red-900/20 text-center">
-                                        {formData.date ? "No hay horarios disponibles para esta fecha." : "Primero selecciona una fecha."}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex gap-4 pt-4">
+                            <div className="flex gap-4 pt-4 border-t border-zinc-900">
                                 <button
                                     type="button"
                                     onClick={() => setStep(1)}
@@ -359,3 +401,4 @@ export default function BookingForm() {
         </div>
     );
 }
+
