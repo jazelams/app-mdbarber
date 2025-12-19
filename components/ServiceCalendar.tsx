@@ -129,15 +129,15 @@ export default function ServiceCalendar({ selectedDate, onDateSelect, closedDays
                                 disabled={isDisabled}
                                 className={`
                                     w-full h-full rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all
-                                    ${isDisabled
-                                        ? 'bg-zinc-900/50 text-zinc-700 cursor-not-allowed border border-transparent' // Estilo deshabilitado
-                                        : isSelected
-                                            ? 'bg-[#D4AF37] text-black shadow-[0_0_15px_rgba(212,175,55,0.4)] scale-110 z-10' // Estilo seleccionado (dorado)
-                                            : isTodayDate
-                                                ? 'bg-zinc-800 text-[#D4AF37] border border-[#D4AF37]/50 hover:bg-zinc-700' // Estilo 'hoy'
-                                                : isCurrentMonth
-                                                    ? 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white border border-transparent' // Estilo normal mes actual
-                                                    : 'bg-transparent text-zinc-600 hover:bg-zinc-900' // Estilo días de otros meses (gris tenue)
+                                    ${!isCurrentMonth
+                                        ? 'invisible pointer-events-none' // Prioridad absoluta: Si no es del mes, invisible
+                                        : isDisabled
+                                            ? 'bg-zinc-900/50 text-zinc-700 cursor-not-allowed border border-transparent'
+                                            : isSelected
+                                                ? 'bg-[#D4AF37] text-black shadow-[0_0_15px_rgba(212,175,55,0.4)] scale-110 z-10'
+                                                : isTodayDate
+                                                    ? 'bg-zinc-800 text-[#D4AF37] border border-[#D4AF37]/50 hover:bg-zinc-700'
+                                                    : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white border border-transparent'
                                     }
                                 `}
                             >

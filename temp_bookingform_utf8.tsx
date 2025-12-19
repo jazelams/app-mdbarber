@@ -1,27 +1,26 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar as CalendarIcon, User, Clock, Scissors, CheckCircle, AlertCircle } from "lucide-react"; // Renamed Calendar to CalendarIcon to avoid conflict
 import ServiceCalendar from "./ServiceCalendar";
-import Modal from "./Modal";
 
-// Definición de la interfaz Servicio
+// Definici├│n de la interfaz Servicio
 interface Service {
-    id: string;        // ID único del servicio
+    id: string;        // ID ├║nico del servicio
     nombre: string;    // Nombre del servicio (ej: "Corte de Cabello")
     precio: number;    // Precio en MXN
-    duracion: number;  // Duración en minutos
+    duracion: number;  // Duraci├│n en minutos
 }
 
-// Interfaz para las reglas de calendario (días cerrados y bloqueos)
+// Interfaz para las reglas de calendario (d├¡as cerrados y bloqueos)
 interface ScheduleRules {
-    closedDays: number[]; // Días de la semana cerrados (0-6)
+    closedDays: number[]; // D├¡as de la semana cerrados (0-6)
     bloqueos: { start: string; end: string; motivo?: string }[]; // Fechas bloqueadas
 }
 
 export default function BookingForm() {
-    const router = useRouter(); // Hook para navegación
+    const router = useRouter(); // Hook para navegaci├│n
 
     // Estados principales
     const [services, setServices] = useState<Service[]>([]); // Lista de servicios disponibles
@@ -30,12 +29,10 @@ export default function BookingForm() {
     // Estado de control del flujo del formulario (Pasos 1, 2, 3)
     const [step, setStep] = useState(1);
 
-    // Estados de UI (Carga, Error, Éxito)
+    // Estados de UI (Carga, Error, ├ëxito)
     const [loading, setLoading] = useState(false);
-    const [loadingSlots, setLoadingSlots] = useState(false); // Estado de carga para horarios
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
-    const [showCalendar, setShowCalendar] = useState(false);
 
     // Estado del formulario con todos los datos de la reserva
     const [formData, setFormData] = useState({
@@ -43,7 +40,7 @@ export default function BookingForm() {
         date: "",            // Fecha seleccionada (YYYY-MM-DD)
         time: "",            // Hora seleccionada (HH:mm)
         nombreCliente: "",   // Nombre del cliente
-        telefonoCliente: "", // Teléfono del cliente
+        telefonoCliente: "", // Tel├®fono del cliente
     });
 
     // Horarios disponibles para la fecha seleccionada
@@ -53,7 +50,6 @@ export default function BookingForm() {
     useEffect(() => {
         if (formData.date && formData.serviceId) {
             setAvailableSlots([]); // Limpiar horarios anteriores
-            setLoadingSlots(true); // Iniciar carga
 
             // Llamada al API para obtener slots disponibles
             fetch(`/api/availability?date=${formData.date}&serviceId=${formData.serviceId}`)
@@ -62,15 +58,14 @@ export default function BookingForm() {
                     if (Array.isArray(data)) {
                         setAvailableSlots(data); // Guardar horarios si la respuesta es un array
                     } else {
-                        setAvailableSlots([]); // Array vacío si hay error o no hay disponibilidad
+                        setAvailableSlots([]); // Array vac├¡o si hay error o no hay disponibilidad
                     }
                 })
-                .catch(err => console.error(err))
-                .finally(() => setLoadingSlots(false)); // Finalizar carga
+                .catch(err => console.error(err));
         }
     }, [formData.date, formData.serviceId]);
 
-    // Efecto de carga inicial: Obtener servicios y reglas del negocio (días cerrados)
+    // Efecto de carga inicial: Obtener servicios y reglas del negocio (d├¡as cerrados)
     useEffect(() => {
         async function fetchData() {
             try {
@@ -81,7 +76,7 @@ export default function BookingForm() {
                     setServices(data);
                 }
 
-                // 2. Obtener Reglas de Horario (Días bloqueados en backend)
+                // 2. Obtener Reglas de Horario (D├¡as bloqueados en backend)
                 const resRules = await fetch('/api/settings/schedule-rules');
                 if (resRules.ok) {
                     const data = await resRules.json();
@@ -94,9 +89,9 @@ export default function BookingForm() {
         fetchData();
     }, []);
 
-    // Manejador del envío del formulario (Crear Cita)
+    // Manejador del env├¡o del formulario (Crear Cita)
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault(); // Prevenir recarga de página
+        e.preventDefault(); // Prevenir recarga de p├ígina
         setLoading(true);
         setError("");
 
@@ -131,7 +126,7 @@ export default function BookingForm() {
                 <div className="w-16 h-16 bg-[#cca35e]/20 rounded-full flex items-center justify-center mx-auto mb-6 text-[#cca35e]">
                     <CheckCircle className="w-12 h-12" />
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-2">¡Reserva Exitosa!</h2>
+                <h2 className="text-2xl font-bold text-white mb-2">┬íReserva Exitosa!</h2>
                 <p className="text-zinc-400 mb-6">Tu cita ha sido agendada correctamente.</p>
 
                 {/* Summary Card */}
@@ -158,12 +153,12 @@ export default function BookingForm() {
                 </div>
 
                 <a
-                    href={`https://wa.me/529993931893?text=${encodeURIComponent(`Hola, quisiera confirmar mi cita:\n\n👤 *Nombre:* ${formData.nombreCliente}\n📱 *Teléfono:* ${formData.telefonoCliente}\n📅 *Cita:* ${formData.date} a las *${formData.time}*`)}`}
+                    href={`https://wa.me/529993931893?text=${encodeURIComponent(`Hola, quisiera confirmar mi cita:\n\n­ƒæñ *Nombre:* ${formData.nombreCliente}\n­ƒô▒ *Tel├®fono:* ${formData.telefonoCliente}\n­ƒôà *Cita:* ${formData.date} a las *${formData.time}*`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 bg-[#25D366] text-white font-bold py-3 px-6 rounded-full hover:bg-[#20bd5a] transition-colors mb-4 w-full shadow-[0_0_20px_rgba(37,211,102,0.4)]"
                 >
-                    <span className="text-xl">💬</span> Confirmar por WhatsApp
+                    <span className="text-xl">­ƒÆ¼</span> Confirmar por WhatsApp
                 </a>
 
                 <button
@@ -183,7 +178,7 @@ export default function BookingForm() {
                 <div className="flex items-center justify-between mb-2">
                     <h2 className="text-2xl font-black text-white uppercase italic">
                         {step === 1 && "1. Elige tu Servicio"}
-                        {step === 2 && "2. ¿Cuando vienes?"}
+                        {step === 2 && "2. ┬┐Cuando vienes?"}
                         {step === 3 && "3. Tus Datos"}
                     </h2>
                     <div className="w-10 h-10 rounded-full bg-[#D4AF37] flex items-center justify-center font-bold text-black border border-[#D4AF37]">
@@ -217,43 +212,21 @@ export default function BookingForm() {
                                 <div
                                     key={service.id}
                                     onClick={() => setFormData({ ...formData, serviceId: service.id })}
-                                    className={`p-5 rounded-2xl border cursor-pointer transition-all duration-300 flex items-center justify-between group
+                                    className={`p-5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between group
                                     ${formData.serviceId === service.id
-                                            ? "border-[#D4AF37] bg-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.4)]"
-                                            : "border-zinc-900 bg-zinc-900/50 hover:bg-[#D4AF37] hover:border-[#D4AF37] hover:shadow-[0_0_20px_rgba(212,175,55,0.4)]"}`}
+                                            ? "border-[#D4AF37] bg-[#D4AF37]/10 shadow-[0_0_15px_rgba(212,175,55,0.2)]"
+                                            : "border-zinc-900 hover:border-zinc-700 bg-zinc-900/50"}`}
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-300
-                                            ${formData.serviceId === service.id
-                                                ? 'bg-black text-[#D4AF37]'
-                                                : 'bg-black text-zinc-500 group-hover:bg-black group-hover:text-[#D4AF37]'
-                                            }`}>
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${formData.serviceId === service.id ? 'bg-[#D4AF37] text-black' : 'bg-black text-zinc-500'}`}>
                                             <Scissors className="w-6 h-6" />
                                         </div>
                                         <div>
-                                            <h3 className={`font-bold text-lg transition-colors duration-300
-                                                ${formData.serviceId === service.id
-                                                    ? 'text-black'
-                                                    : 'text-white group-hover:text-black'
-                                                }`}>
-                                                {service.nombre}
-                                            </h3>
-                                            <p className={`text-sm transition-colors duration-300
-                                                ${formData.serviceId === service.id
-                                                    ? 'text-black/80'
-                                                    : 'text-zinc-400 group-hover:text-black/80'
-                                                }`}>
-                                                {service.duracion} min
-                                            </p>
+                                            <h3 className="text-white font-bold text-lg">{service.nombre}</h3>
+                                            <p className="text-sm text-zinc-400">{service.duracion} min</p>
                                         </div>
                                     </div>
-                                    <span className={`font-bold text-xl transition-colors duration-300
-                                        ${formData.serviceId === service.id
-                                            ? 'text-black'
-                                            : 'text-[#D4AF37] group-hover:text-black'
-                                        }`}>
-                                        ${service.precio} MXN
-                                    </span>
+                                    <span className="text-[#D4AF37] font-bold text-xl">${service.precio} MXN</span>
                                 </div>
                             ))}
                             <button
@@ -273,41 +246,20 @@ export default function BookingForm() {
                                 {/* Calendar Column */}
                                 <div>
                                     <label className="block text-sm font-bold text-[#D4AF37] mb-3 uppercase tracking-wide">Selecciona Fecha</label>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowCalendar(true)}
-                                        className={`w-full py-6 rounded-2xl border-2 flex flex-col items-center justify-center gap-3 transition-all duration-300
-                                            ${formData.date
-                                                ? 'bg-[#D4AF37] border-[#D4AF37] text-black shadow-[0_0_20px_rgba(212,175,55,0.4)]'
-                                                : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-[#D4AF37] hover:text-[#D4AF37]'
-                                            }`}
-                                    >
-                                        <CalendarIcon className="w-8 h-8" />
-                                        <span className="font-bold text-lg">
-                                            {formData.date
-                                                ? formData.date
-                                                : "Elegir Fecha"
-                                            }
-                                        </span>
-                                        {formData.date && <span className="text-xs font-bold uppercase tracking-wider opacity-60">Cambiar</span>}
-                                    </button>
-
-                                    <Modal
-                                        isOpen={showCalendar}
-                                        onClose={() => setShowCalendar(false)}
-                                        title="Selecciona una Fecha"
-                                    >
-                                        <ServiceCalendar
-                                            selectedDate={formData.date}
-                                            onDateSelect={(date) => {
-                                                setFormData({ ...formData, date, time: '' });
-                                                setShowCalendar(false);
-                                            }}
-                                            closedDays={scheduleRules.closedDays}
-                                            bloqueos={scheduleRules.bloqueos}
-                                        />
-                                    </Modal>
+                                    <ServiceCalendar
+                                        selectedDate={formData.date}
+                                        onDateSelect={(date) => {
+                                            setFormData({ ...formData, date, time: '' }); // Reset time when date changes
+                                        }}
+                                        closedDays={scheduleRules.closedDays}
+                                        bloqueos={scheduleRules.bloqueos}
+                                    />
+                                    {formData.date && (
+                                        <div className="mt-2 text-center">
+                                            <span className="text-zinc-400 text-sm">Fecha seleccionada: </span>
+                                            <span className="text-white font-bold">{formData.date}</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Time Column */}
@@ -318,11 +270,6 @@ export default function BookingForm() {
                                         <div className="h-40 flex flex-col items-center justify-center bg-zinc-900/50 rounded-xl border-2 border-dashed border-zinc-800 text-zinc-600">
                                             <CalendarIcon className="w-8 h-8 mb-2 opacity-50" />
                                             <p className="text-sm">Primero elige una fecha</p>
-                                        </div>
-                                    ) : loadingSlots ? (
-                                        <div className="h-40 flex flex-col items-center justify-center text-zinc-500 animate-pulse">
-                                            <Clock className="w-6 h-6 mb-2 animate-spin" />
-                                            <p className="text-sm">Buscando horarios...</p>
                                         </div>
                                     ) : availableSlots.length > 0 ? (
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -345,7 +292,7 @@ export default function BookingForm() {
                                         <div className="text-red-400 text-sm p-4 bg-red-900/10 rounded-xl border border-red-900/20 text-center flex flex-col items-center gap-2">
                                             <AlertCircle className="w-6 h-6" />
                                             <p className="font-bold">Sin Disponibilidad</p>
-                                            <p className="text-xs opacity-70">No hay horarios disponibles para esta fecha. Intenta otro día.</p>
+                                            <p className="text-xs opacity-70">No hay horarios disponibles para esta fecha. Intenta otro d├¡a.</p>
                                         </div>
                                     )}
                                 </div>
@@ -357,7 +304,7 @@ export default function BookingForm() {
                                     onClick={() => setStep(1)}
                                     className="w-1/3 py-4 border-2 border-zinc-800 text-zinc-400 font-bold rounded-xl hover:bg-zinc-900 hover:text-white transition-colors"
                                 >
-                                    ATRÁS
+                                    ATR├üS
                                 </button>
                                 <button
                                     type="button"
@@ -378,7 +325,7 @@ export default function BookingForm() {
                                 <div>
                                     <h4 className="text-[#D4AF37] font-bold mb-1">Tolerancia de 10 minutos</h4>
                                     <p className="text-sm text-zinc-400">
-                                        Por respeto a todos los clientes, si llegas tarde tu cita podría ser cancelada automáticamente.
+                                        Por respeto a todos los clientes, si llegas tarde tu cita podr├¡a ser cancelada autom├íticamente.
                                     </p>
                                 </div>
                             </div>
@@ -390,7 +337,7 @@ export default function BookingForm() {
                                     <input
                                         type="text"
                                         required
-                                        placeholder="Ej: Juan Pérez"
+                                        placeholder="Ej: Juan P├®rez"
                                         className="w-full bg-zinc-900 border-2 border-zinc-900 rounded-xl pl-12 p-4 text-white font-medium focus:outline-none focus:border-[#D4AF37] focus:bg-black transition-all placeholder:text-zinc-700"
                                         onChange={(e) => setFormData({ ...formData, nombreCliente: e.target.value })}
                                         value={formData.nombreCliente}
@@ -399,7 +346,7 @@ export default function BookingForm() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-zinc-500 mb-2 uppercase">Teléfono</label>
+                                <label className="block text-sm font-bold text-zinc-500 mb-2 uppercase">Tel├®fono</label>
                                 <div className="relative">
                                     <input
                                         type="tel"
@@ -428,7 +375,7 @@ export default function BookingForm() {
                                         value={formData.telefonoCliente}
                                     />
                                 </div>
-                                <p className="text-xs text-zinc-600 mt-2 text-center uppercase font-bold">Formato automático: 10 dígitos</p>
+                                <p className="text-xs text-zinc-600 mt-2 text-center uppercase font-bold">Formato autom├ítico: 10 d├¡gitos</p>
                             </div>
 
                             <div className="flex gap-4 mt-8">
@@ -437,7 +384,7 @@ export default function BookingForm() {
                                     onClick={() => setStep(2)}
                                     className="w-1/3 py-4 border-2 border-zinc-800 text-zinc-400 font-bold rounded-xl hover:bg-zinc-900 hover:text-white transition-colors"
                                 >
-                                    ATRÁS
+                                    ATR├üS
                                 </button>
                                 <button
                                     type="submit"
