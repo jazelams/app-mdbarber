@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar as CalendarIcon, User, Clock, Scissors, CheckCircle, AlertCircle } from "lucide-react"; // Renamed Calendar to CalendarIcon to avoid conflict
-import ServiceCalendar from "./ServiceCalendar";
+import ServiceCalendar from "./ServiceCalendarComponent";
 import Modal from "./Modal";
 
 // Definición de la interfaz Servicio
