@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Scissors, Calendar, User, Facebook, MessageCircle, MapPin, ExternalLink } from "lucide-react";
 import TypewriterText from "@/components/TypewriterText";
 import WireframeWaves from "@/components/WireframeWaves";
+import ClientAuthButton from "@/components/ClientAuthButton";
 
 export default function Home() {
   return (
@@ -20,6 +21,9 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Auth Button for Clients */}
+            <ClientAuthButton />
+
             <Link
               href="/admin/login"
               className="px-6 py-2.5 bg-[#D4AF37] text-black font-bold rounded-full hover:bg-[#B8860B] transition-all shadow-[0_0_15px_rgba(212,175,55,0.4)] flex items-center gap-2 text-sm uppercase tracking-wide"

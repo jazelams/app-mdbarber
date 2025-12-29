@@ -43,13 +43,29 @@ model Cita {
   fechaFin        DateTime
   precio          Decimal
   estado          EstadoCita @default(PENDIENTE)
+  stripePaymentId String?    // ID de pago de Stripe (si aplica)
+  clienteId       String?    // ID del Cliente Registrado (Opcional, para V2.0)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   barbero         Barbero?   @relation(fields: [barberoId], references: [id])
   servicio        Servicio   @relation(fields: [servicioId], references: [id])
+  cliente         Cliente?   @relation(fields: [clienteId], references: [id])
 
   @@index([fechaInicio, fechaFin])
   @@map("cita")
+}
+
+model Cliente {
+  id        String   @id @default(uuid())
+  nombre    String
+  email     String   @unique
+  password  String   // Hash borroso
+  telefono  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  citas     Cita[]
+
+  @@map("cliente")
 }
 
 model Horario {

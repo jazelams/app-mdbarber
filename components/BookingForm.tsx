@@ -2,9 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar as CalendarIcon, User, Clock, Scissors, CheckCircle, AlertCircle } from "lucide-react"; // Renamed Calendar to CalendarIcon to avoid conflict
+import { Calendar as CalendarIcon, User, Clock, Scissors, CheckCircle, AlertCircle, CreditCard } from "lucide-react";
 import ServiceCalendar from "./ServiceCalendarComponent";
 import Modal from "./Modal";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import CheckoutForm from "./CheckoutForm";
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 // Definición de la interfaz Servicio
 interface Service {
@@ -27,7 +32,7 @@ export default function BookingForm() {
     const [services, setServices] = useState<Service[]>([]); // Lista de servicios disponibles
     const [scheduleRules, setScheduleRules] = useState<ScheduleRules>({ closedDays: [], bloqueos: [] }); // Reglas de horario
 
-    // Estado de control del flujo del formulario (Pasos 1, 2, 3)
+    // Estado de control del flujo del formulario (Pasos 1, 2, 3, 4)
     const [step, setStep] = useState(1);
 
     // Estados de UI (Carga, Error, Éxito)
@@ -37,6 +42,10 @@ export default function BookingForm() {
     const [success, setSuccess] = useState(false);
     const [showCalendar, setShowCalendar] = useState(false);
 
+    // Stripe State
+    const [clientSecret, setClientSecret] = useState("");
+    const [paymentMethod, setPaymentMethod] = useState<'card' | 'local'>('card'); // 'card' or 'local'
+
     // Estado del formulario con todos los datos de la reserva
     const [formData, setFormData] = useState({
         serviceId: "",       // ID del servicio seleccionado
@@ -44,6 +53,7 @@ export default function BookingForm() {
         time: "",            // Hora seleccionada (HH:mm)
         nombreCliente: "",   // Nombre del cliente
         telefonoCliente: "", // Teléfono del cliente
+        stripePaymentId: "", // ID de pago (se llena al pagar)
     });
 
     // Horarios disponibles para la fecha seleccionada
@@ -94,32 +104,77 @@ export default function BookingForm() {
         fetchData();
     }, []);
 
-    // Manejador del envío del formulario (Crear Cita)
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault(); // Prevenir recarga de página
+    // Paso intermedio: Crear Intento de Pago O Guardar Directo si es Local
+    const handleGoToPayment = async (e: React.FormEvent) => {
+        e.preventDefault();
         setLoading(true);
         setError("");
 
         try {
-            // Enviamos los datos al API para crear la cita
+            const selectedService = services.find(s => s.id === formData.serviceId);
+            if (!selectedService) throw new Error("Servicio no encontrado");
+
+            if (paymentMethod === 'local') {
+                // Si es pago local, guardamos directo SIN Stripe
+                // Simulamos que paymentId es "PENDIENTE_EN_LOCAL" para que el backend sepa (o null)
+                // Pero tu backend espera opcional stripePaymentId, así que lo dejamos vacío o ponemos una nota.
+                // Reutilizamos la función de éxito pasándole un string vacío o especial.
+                await handlePaymentSuccess("PAGO_EN_LOCAL");
+                return; // Salimos, handlePaymentSuccess se encarga del resto
+            }
+
+            // Si es TARJETA, vamos a Stripe
+            const res = await fetch("/api/create-payment-intent", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ amount: selectedService.precio }),
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || "Error iniciando pago");
+            }
+
+            const data = await res.json();
+            setClientSecret(data.clientSecret);
+            setStep(4); // Mover al paso de pago
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Manejador FINAL: Guardar Cita después del pago exitoso
+    const handlePaymentSuccess = async (paymentId: string) => {
+        setLoading(true);
+
+        // Actualizamos el formData con el paymentId, pero como setState es asíncrono,
+        // creamos el objeto final aquí para enviarlo
+        const finalData = { ...formData, stripePaymentId: paymentId };
+
+        try {
             const response = await fetch("/api/appointments", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(finalData),
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || "Error al reservar");
+                // OJO: Si falla aquí, el cliente YA PAGÓ pero la cita falló.
+                // En producción deberías tener un mecanismo para reembolsar o avisar a soporte.
+                throw new Error(data.error || "Error al guardar reserva (Pago recibido)");
             }
 
-            // Si todo sale bien, marcamos como exitoso
+            // IMPORTANTE: Actualizamos el estado local para que la UI final lo refleje
+            setFormData(finalData);
             setSuccess(true);
         } catch (err: any) {
-            setError(err.message); // Mostrar error al usuario
+            setError(err.message);
         } finally {
-            setLoading(false); // Desactivar estado de carga
+            setLoading(false);
         }
     };
 
@@ -132,7 +187,11 @@ export default function BookingForm() {
                     <CheckCircle className="w-12 h-12" />
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">¡Reserva Exitosa!</h2>
-                <p className="text-zinc-400 mb-6">Tu cita ha sido agendada correctamente.</p>
+                <p className="text-zinc-400 mb-6">
+                    {formData.stripePaymentId === 'PAGO_EN_LOCAL'
+                        ? "Tu cita ha sido agendada. Recuerda pagar en el local."
+                        : "Tu pago fue procesado y tu cita agendada."}
+                </p>
 
                 {/* Summary Card */}
                 <div className="bg-black/40 rounded-xl p-4 mb-6 text-left border border-zinc-800">
@@ -154,11 +213,19 @@ export default function BookingForm() {
                             <span className="text-zinc-500">Hora:</span>
                             <span className="text-white font-medium">{formData.time}</span>
                         </div>
+                        <div className="flex justify-between pt-2 border-t border-zinc-800 mt-2">
+                            <span className="text-zinc-500">Estado:</span>
+                            {formData.stripePaymentId !== 'PAGO_EN_LOCAL' ? (
+                                <span className="text-[#25D366] font-bold">PAGADO (${selectedService?.precio} MXN)</span>
+                            ) : (
+                                <span className="text-[#D4AF37] font-bold">PAGO PENDIENTE EN LOCAL</span>
+                            )}
+                        </div>
                     </div>
                 </div>
 
                 <a
-                    href={`https://wa.me/529993931893?text=${encodeURIComponent(`Hola, quisiera confirmar mi cita:\n\n👤 *Nombre:* ${formData.nombreCliente}\n📱 *Teléfono:* ${formData.telefonoCliente}\n📅 *Cita:* ${formData.date} a las *${formData.time}*`)}`}
+                    href={`https://wa.me/529993931893?text=${encodeURIComponent(`Hola, quisiera confirmar mi cita:\n\nCliente: ${formData.nombreCliente}\nTelefono: ${formData.telefonoCliente}\nFecha: ${formData.date}\nHora: ${formData.time}\n\nESTADO: ${formData.stripePaymentId !== 'PAGO_EN_LOCAL' ? `PAGADO ($${selectedService?.precio} MXN)` : 'PAGO PENDIENTE EN LOCAL'}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 bg-[#25D366] text-white font-bold py-3 px-6 rounded-full hover:bg-[#20bd5a] transition-colors mb-4 w-full shadow-[0_0_20px_rgba(37,211,102,0.4)]"
@@ -185,6 +252,7 @@ export default function BookingForm() {
                         {step === 1 && "1. Elige tu Servicio"}
                         {step === 2 && "2. ¿Cuando vienes?"}
                         {step === 3 && "3. Tus Datos"}
+                        {step === 4 && "4. Pago Seguro"}
                     </h2>
                     <div className="w-10 h-10 rounded-full bg-[#D4AF37] flex items-center justify-center font-bold text-black border border-[#D4AF37]">
                         {step}
@@ -194,7 +262,7 @@ export default function BookingForm() {
                 <div className="w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
                     <div
                         className="h-full bg-[#D4AF37] transition-all duration-500 ease-out"
-                        style={{ width: `${(step / 3) * 100}%` }}
+                        style={{ width: `${(step / 4) * 100}%` }}
                     />
                 </div>
             </div>
@@ -207,7 +275,8 @@ export default function BookingForm() {
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit}>
+                {/* No form tag wrapping everything to avoid nested forms issue with Stripe */}
+                <div>
                     {step === 1 && (
                         <div className="grid gap-4">
                             {services.length === 0 && (
@@ -372,7 +441,7 @@ export default function BookingForm() {
                     )}
 
                     {step === 3 && (
-                        <div className="space-y-6">
+                        <form onSubmit={handleGoToPayment} className="space-y-6">
                             <div className="bg-[#D4AF37]/10 border border-[#D4AF37]/30 p-5 rounded-xl flex items-start gap-4">
                                 <Clock className="w-6 h-6 text-[#D4AF37] shrink-0" />
                                 <div>
@@ -408,27 +477,47 @@ export default function BookingForm() {
                                         maxLength={13} // 10 nums + 3 dashes
                                         className="w-full bg-zinc-900 border-2 border-zinc-900 rounded-xl p-4 text-white font-medium focus:outline-none focus:border-[#D4AF37] focus:bg-black transition-all placeholder:text-zinc-700 text-center tracking-widest text-lg"
                                         onChange={(e) => {
-                                            // Strip everything but numbers
                                             const raw = e.target.value.replace(/\D/g, '').slice(0, 10);
-
-                                            // Format as XXXX-XX-XX-XX
                                             let formatted = raw;
-                                            if (raw.length > 4) {
-                                                formatted = raw.slice(0, 4) + '-' + raw.slice(4);
-                                            }
-                                            if (raw.length > 6) {
-                                                formatted = formatted.slice(0, 7) + '-' + raw.slice(6);
-                                            }
-                                            if (raw.length > 8) {
-                                                formatted = formatted.slice(0, 10) + '-' + raw.slice(8);
-                                            }
-
+                                            if (raw.length > 4) formatted = raw.slice(0, 4) + '-' + raw.slice(4);
+                                            if (raw.length > 6) formatted = formatted.slice(0, 7) + '-' + raw.slice(6);
+                                            if (raw.length > 8) formatted = formatted.slice(0, 10) + '-' + raw.slice(8);
                                             setFormData({ ...formData, telefonoCliente: formatted });
                                         }}
                                         value={formData.telefonoCliente}
                                     />
                                 </div>
                                 <p className="text-xs text-zinc-600 mt-2 text-center uppercase font-bold">Formato automático: 10 dígitos</p>
+                            </div>
+
+                            {/* Selección de Método de Pago */}
+                            <div>
+                                <label className="block text-sm font-bold text-zinc-500 mb-4 uppercase">Método de Pago</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('card')} // Necesitamos crear este estado
+                                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all
+                                            ${paymentMethod === 'card'
+                                                ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-white'
+                                                : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                                    >
+                                        <CreditCard className={`w-8 h-8 ${paymentMethod === 'card' ? 'text-[#D4AF37]' : 'text-zinc-600'}`} />
+                                        <span className="font-bold text-sm">Pago Online</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('local')}
+                                        className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all
+                                            ${paymentMethod === 'local'
+                                                ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-white'
+                                                : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                                    >
+                                        <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-black ${paymentMethod === 'local' ? 'border-[#D4AF37] text-[#D4AF37]' : 'border-zinc-600 text-zinc-600'}`}>$</div>
+                                        <span className="font-bold text-sm">Efectivo en Local</span>
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="flex gap-4 mt-8">
@@ -444,14 +533,39 @@ export default function BookingForm() {
                                     disabled={loading || !formData.nombreCliente || !formData.telefonoCliente}
                                     className="w-2/3 py-4 bg-[#D4AF37] text-black font-bold rounded-xl hover:bg-[#FCC200] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_rgba(212,175,55,0.4)] flex items-center justify-center gap-2"
                                 >
-                                    {loading ? 'CONFIRMANDO...' : 'CONFIRMAR RESERVA'}
+                                    {loading ? 'PROCESANDO...' : (paymentMethod === 'card' ? 'IR A PAGAR' : 'CONFIRMAR RESERVA')}
                                 </button>
                             </div>
+                        </form>
+                    )}
+
+                    {step === 4 && clientSecret && (
+                        <div className="space-y-6">
+                            <div className="mb-4 text-center">
+                                <p className="text-zinc-400 text-sm">Resumen de Cargo:</p>
+                                <p className="text-[#D4AF37] font-bold text-3xl">
+                                    ${services.find(s => s.id === formData.serviceId)?.precio} MXN
+                                </p>
+                            </div>
+
+                            <Elements options={{ clientSecret, appearance: { theme: 'night', variables: { colorPrimary: '#D4AF37' } } }} stripe={stripePromise}>
+                                <CheckoutForm
+                                    amount={services.find(s => s.id === formData.serviceId)?.precio || 0}
+                                    onSuccess={handlePaymentSuccess}
+                                />
+                            </Elements>
+
+                            <button
+                                type="button"
+                                onClick={() => setStep(3)}
+                                className="w-full mt-4 py-3 text-zinc-500 hover:text-white text-sm font-bold underline transition-colors"
+                            >
+                                Cancelar y Volver
+                            </button>
                         </div>
                     )}
-                </form>
+                </div>
             </div>
         </div>
     );
 }
-
