@@ -55,9 +55,27 @@ export default function BookingForm() {
         telefonoCliente: "", // Teléfono del cliente
         stripePaymentId: "", // ID de pago (se llena al pagar)
     });
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     // Horarios disponibles para la fecha seleccionada
     const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+
+    // Cargar Usuario si existe sesión
+    useEffect(() => {
+        fetch('/api/auth/me')
+            .then(res => res.json())
+            .then(data => {
+                if (data.user) {
+                    setCurrentUserId(data.user.id);
+                    setFormData(prev => ({
+                        ...prev,
+                        nombreCliente: data.user.nombre,
+                        telefonoCliente: data.user.telefono || ""
+                    }));
+                }
+            })
+            .catch(() => { }); // Ignorar error si no hay sesión
+    }, []);
 
     // Efecto secundario: Buscar horarios disponibles cuando cambian fecha o servicio
     useEffect(() => {
@@ -151,7 +169,11 @@ export default function BookingForm() {
 
         // Actualizamos el formData con el paymentId, pero como setState es asíncrono,
         // creamos el objeto final aquí para enviarlo
-        const finalData = { ...formData, stripePaymentId: paymentId };
+        const finalData = {
+            ...formData,
+            stripePaymentId: paymentId,
+            clienteId: currentUserId // Vincular al usuario logueado
+        };
 
         try {
             const response = await fetch("/api/appointments", {

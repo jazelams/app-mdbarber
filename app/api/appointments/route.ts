@@ -80,7 +80,9 @@ export async function POST(request: Request) {
                 fechaFin: endDateTime,
                 servicioId: serviceId,
                 precio: service.precio,
-                estado: 'PENDIENTE'
+                clienteId: body.clienteId || null,
+                stripePaymentId: body.stripePaymentId || null,
+                estado: body.stripePaymentId && body.stripePaymentId !== 'PAGO_EN_LOCAL' ? 'CONFIRMADA' : 'PENDIENTE'
             }
         });
 
