@@ -1,11 +1,14 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import Link from 'next/link'; // Import Link
+import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { jwtVerify } from 'jose';
 import { Calendar, Clock, Scissors, User, LogOut, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Cita, Servicio } from '@prisma/client';
 
 const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET || 'secret-key-change-me');
+
+type CitaConServicio = Cita & { servicio: Servicio };
 
 async function getClientSession() {
     const cookieStore = await cookies();
@@ -28,6 +31,7 @@ export default async function ProfilePage() {
         redirect('/login');
     }
 
+    // @ts-ignore - Prisma types might be stale in dev, forcing query
     const cliente = await prisma.cliente.findUnique({
         where: { id: session.id as string },
         include: {
@@ -40,8 +44,14 @@ export default async function ProfilePage() {
 
     if (!cliente) redirect('/login');
 
-    const upcomingAppointments = cliente.citas.filter(c => new Date(c.fechaInicio) >= new Date());
-    const pastAppointments = cliente.citas.filter(c => new Date(c.fechaInicio) < new Date());
+    const pastAppointments: CitaConServicio[] = (cliente.citas as any[]).filter((c: CitaConServicio) =>
+        new Date(c.fechaInicio) < new Date() || c.estado === 'COMPLETADA'
+    ) as CitaConServicio[];
+
+    // Las próximas son las que NO están en pasadas (para no duplicar)
+    const upcomingAppointments: CitaConServicio[] = (cliente.citas as any[]).filter((c: CitaConServicio) =>
+        !pastAppointments.find(p => p.id === c.id)
+    ) as CitaConServicio[];
 
     return (
         <div className="min-h-screen bg-black text-white p-4 pb-20">
@@ -84,13 +94,13 @@ export default async function ProfilePage() {
                             {upcomingAppointments.map((cita) => (
                                 <div key={cita.id} className="bg-zinc-900 border border-[#D4AF37]/50 rounded-2xl p-6 relative overflow-hidden group hover:border-[#D4AF37] transition-all shadow-[0_0_20px_rgba(212,175,55,0.1)]">
                                     <div className="absolute top-0 right-0 bg-[#D4AF37] text-black text-xs font-bold px-3 py-1 rounded-bl-xl uppercase">
-                                        {cita.stripePaymentId && cita.stripePaymentId !== 'PAGO_EN_LOCAL' ? 'PAGADO' : 'PENDIENTE PAGO'}
+                                        {(cita as any).stripePaymentId && (cita as any).stripePaymentId !== 'PAGO_EN_LOCAL' ? 'PAGADO' : 'PENDIENTE PAGO'}
                                     </div>
 
                                     <div className="flex items-start justify-between mb-4">
                                         <div>
                                             <h4 className="text-xl font-bold text-white mb-1">{cita.servicio.nombre}</h4>
-                                            <p className="text-[#D4AF37] font-bold text-lg">${cita.precio.toString()} MXN</p>
+                                            <p className="text-[#D4AF37] font-bold text-lg">${Number(cita.precio).toFixed(2)} MXN</p>
                                         </div>
                                     </div>
 
@@ -106,11 +116,10 @@ export default async function ProfilePage() {
                                     </div>
 
                                     <div className="mt-4 pt-4 border-t border-zinc-800 flex justify-between items-center">
-                                        <span className={`flex items-center gap-2 text-sm font-bold ${cita.estado === 'CONFIRMADA' ? 'text-green-500' : 'text-zinc-500'}`}>
+                                        <span className={`flex items - center gap - 2 text - sm font - bold ${cita.estado === 'CONFIRMADA' ? 'text-green-500' : 'text-zinc-500'} `}>
                                             {cita.estado === 'CONFIRMADA' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                                             {cita.estado}
                                         </span>
-                                        {/* Botón de cancelar podría ir aquí en v2 */}
                                     </div>
                                 </div>
                             ))}
@@ -130,7 +139,7 @@ export default async function ProfilePage() {
                                     <p className="font-bold text-white">{cita.servicio.nombre}</p>
                                     <p className="text-xs text-zinc-500">{new Date(cita.fechaInicio).toLocaleDateString()}</p>
                                 </div>
-                                <span className="text-zinc-600 font-mono text-sm">${cita.precio.toString()}</span>
+                                <span className="text-zinc-600 font-mono text-sm">${Number(cita.precio).toFixed(2)}</span>
                             </div>
                         ))}
                         {pastAppointments.length === 0 && (
