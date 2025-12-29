@@ -17,6 +17,7 @@ interface Service {
     nombre: string;    // Nombre del servicio (ej: "Corte de Cabello")
     precio: number;    // Precio en MXN
     duracion: number;  // Duración en minutos
+    imagenUrl?: string;   // URL de la imagen (Opcional)
 }
 
 // Interfaz para las reglas de calendario (días cerrados y bloqueos)
@@ -314,12 +315,20 @@ export default function BookingForm() {
                                             : "border-zinc-900 bg-zinc-900/50 hover:bg-[#D4AF37] hover:border-[#D4AF37] hover:shadow-[0_0_20px_rgba(212,175,55,0.4)]"}`}
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-300
+                                        <div className={`w-16 h-16 rounded-xl flex items-center justify-center transition-colors duration-300 overflow-hidden relative border border-zinc-800
                                             ${formData.serviceId === service.id
                                                 ? 'bg-black text-[#D4AF37]'
                                                 : 'bg-black text-zinc-500 group-hover:bg-black group-hover:text-[#D4AF37]'
                                             }`}>
-                                            <Scissors className="w-6 h-6" />
+                                            {service.imagenUrl ? (
+                                                <img
+                                                    src={service.imagenUrl}
+                                                    alt={service.nombre}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <Scissors className="w-6 h-6" />
+                                            )}
                                         </div>
                                         <div>
                                             <h3 className={`font-bold text-lg transition-colors duration-300
