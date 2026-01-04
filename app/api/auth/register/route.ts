@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     } catch (error: any) {
         console.error("Error registrando cliente:", error);
         return NextResponse.json(
-            { error: "Error interno del servidor al crear cuenta." },
+            { error: error.message || "Error interno del servidor al crear cuenta." },
             { status: 500 }
         );
     }
